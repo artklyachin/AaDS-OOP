@@ -12,6 +12,8 @@ class Stack {
 public:
 	Stack();
 	~Stack();
+	void operator() (Stack& st) = delete;
+	void operator= (Stack& st) = delete;
 
 	void Push(int el);
 	int Pop();
