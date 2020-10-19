@@ -1,5 +1,6 @@
 ﻿#include <iostream>
 #include <string>
+#include <assert.h>
 
 
 using namespace std;
@@ -12,8 +13,8 @@ class Stack {
 public:
 	Stack();
 	~Stack();
-	void operator() (Stack& st) = delete;
-	void operator= (Stack& st) = delete;
+	const Stack operator() (const Stack& st) = delete;
+	const Stack operator= (const Stack& st) = delete;
 
 	void Push(int el);
 	int Pop();
@@ -57,16 +58,13 @@ void Stack::Push(int el)
 
 int Stack::Pop()
 {
-	if (head == nullptr) {
-		return INF;
-	} else {
-		int returnValue = head->Data;
-		Node* nodeToDelete = head;
-		head = head->Next;
-		delete nodeToDelete;
-		--size;
-		return returnValue;
-	}
+	assert(head != nullptr);
+	int returnValue = head->Data;
+	Node* nodeToDelete = head;
+	head = head->Next;
+	delete nodeToDelete;
+	--size;
+	return returnValue;
 }
 
 
@@ -78,6 +76,7 @@ int Stack::Size()
 
 int Stack::Top()
 {
+	assert(head != nullptr);
 	return head->Data;
 }
 
