@@ -95,19 +95,22 @@ int64_t median(vector<int64_t>& A, int64_t l, int64_t r, int64_t d)
 
 int64_t find_statistics(vector<int64_t>& A, int64_t l, int64_t r, int64_t k)
 {
-    if (r - l <= 1) {
-        return A[l];
+    while (r - l > 1) {
+        int64_t x = median(A, l, r, 5);
+        auto mid = Partition(A, l, r, x);
+        int64_t less_than_x = mid.first;
+        int64_t equal_to_x = mid.second;
+        if (k >= less_than_x && k < less_than_x + equal_to_x) {
+            return A[l + less_than_x];
+        }
+        if (k < less_than_x) {
+            r = l + less_than_x;
+        } else {
+            l += less_than_x + equal_to_x;
+            k -= less_than_x + equal_to_x;
+        }
     }
-    int64_t x = median(A, l, r, 5);
-    auto mid = Partition(A, l, r, x); 
-    int64_t less_than_x = mid.first;
-    int64_t equal_to_x = mid.second;
-    if (k >= less_than_x && k < less_than_x + equal_to_x) return A[l + less_than_x];
-    if (k < less_than_x) {
-        return find_statistics(A, l, l + less_than_x, k);
-    } else {
-        return find_statistics(A, l + less_than_x + equal_to_x, r, k - less_than_x - equal_to_x);
-    }
+    return A[l];
 }
 
 int main()
