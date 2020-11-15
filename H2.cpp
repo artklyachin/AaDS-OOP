@@ -17,26 +17,40 @@
 using namespace std;
 
 
-void sorted(vector<int64_t>& A, int64_t l, int64_t r, int64_t bit)
-{
-	int64_t j = r - 1;
-	for (int64_t i = l; i < j; ++i) {
-		if (((A[i] >> bit) & 1LL) == 0) continue;
-		while (j > i && ((A[j] >> bit) & 1LL) == 1) --j;
-		if (j > i) swap(A[i], A[j]);
-	}
-}
-
-
-void LSD(vector<int64_t>& A, int64_t l, int64_t r, int64_t bit)
+void LSD(vector<int64_t>& A, int64_t l, int64_t r, int64_t byte_number)
 {
 	if (r - l <= 1) return;
-	if (bit == -1) return;
-	sorted(A, l, r, bit);
+	if (byte_number == -1) return;
+	vector<int64_t> count(256, 0);
+	vector<int64_t> position(256, 0);
+	for (int64_t i = l; i < r; ++i) {
+		int64_t byte = A[i] / (1LL << (8 * byte_number)) % 256;
+		++count[byte];
+	}
+	for (int64_t i = 1; i < count.size(); ++i) {
+		count[i] += count[i - 1];
+	}
 	int64_t j = l;
-	while (j < r && ((A[j] >> bit) & 1LL) == 0) ++j;
-	LSD(A, l, j, bit - 1);
-	LSD(A, j, r, bit - 1);
+	while(j < r) {
+		int64_t byte = A[j] / (1LL << (8 * byte_number)) % 256;
+		if (byte == 0) {
+			++j;
+		} else {
+			if (j < l + count[byte - 1]) {
+				swap(A[j], A[l + count[byte - 1] + position[byte]]);
+				++position[byte];
+			} else {
+				++j;
+			}
+		}
+	}
+	int64_t prevl = l;
+	for (int64_t i = 0; i < 256; ++i) {
+		LSD(A, prevl, l + count[i], byte_number - 1);
+		prevl = l + count[i];
+	}
+	count.clear();
+	position.clear();
 }
 
 
@@ -50,7 +64,7 @@ int main()
 	for (int64_t i = 0; i < n; ++i) {
 		cin >> A[i];
 	}
-	LSD(A, 0, n, 63);
+	LSD(A, 0, n, 7);
 	for (int64_t i = 0; i < n; ++i) {
 		cout << A[i] << " ";
 	}
