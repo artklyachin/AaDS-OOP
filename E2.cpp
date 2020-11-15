@@ -23,47 +23,56 @@ const int64_t INF = 1e9 + 7;
 class Heap {
 public:
 	Heap();
-	~Heap() {};
+	Heap(vector<int64_t>& elems);
+	~Heap();
 	const Heap operator() (const Heap& h) = delete;
 	const Heap operator= (const Heap& h) = delete;
 
 	void Push(int64_t el);
 	int64_t Pop();
-	int64_t Top();
+	int64_t Get_Max();
 	int64_t Size();
 
 private:
-	int64_t size;
-	int64_t* h;
-	int64_t max_size = 1e5 + 7;
+	vector<int64_t> h;
 
 	void Lift_Up(int64_t index);
 	void Pull_Down(int64_t index);
 };
 
-Heap::Heap():
-	size(1)
+Heap::Heap()
+{ }
+
+
+Heap::~Heap() 
 {
-	h = new int64_t[max_size];
+	h.clear();
 }
 
+
+Heap::Heap(vector<int64_t>& elems)
+{
+	h = elems;
+	sort(h.rbegin(), h.rend());
+}
 
 
 void Heap::Lift_Up(int64_t index)
 {
-	int64_t p = index / 2;
-	while (p > 0 && h[index] > h[p]) {
+	int64_t p = (index - 1) / 2;
+	while (p >= 0 && h[index] > h[p]) {
 		swap(h[index], h[p]);
 		index = p;
-		p = index / 2;
+		p = (index - 1) / 2;
 	}
 }
 
 
 void Heap::Pull_Down(int64_t index)
 {
-	while (2 * index < size) {
-		int64_t left = 2 * index, right = 2 * index + 1;
+	int64_t size = h.size();
+	while (2 * index + 1 < size) {
+		int64_t left = 2 * index + 1, right = 2 * index + 2;
 		int64_t j = left;
 		if (right < size && h[left] < h[right]) {
 			j = right;
@@ -79,35 +88,28 @@ void Heap::Pull_Down(int64_t index)
 
 void Heap::Push(int64_t el)
 {
-	int64_t index = size;
-	h[size] = el;
-	++size;
-	Lift_Up(index);
+	h.push_back(el);
+	Lift_Up(int64_t(h.size()) - 1);
 }
 
 
 int64_t Heap::Pop()
 {
-	assert(size > 1);
-	int64_t returnValue = h[1];
-	swap(h[1], h[size - 1]);
-	--size;
-	Pull_Down(1);
+	assert(h.size() > 0);
+	int64_t returnValue = h[0];
+	swap(h[0], h[int64_t(h.size()) - 1]);
+	h.pop_back();
+	Pull_Down(0);
 	return returnValue;
 }
 
 
-int64_t Heap::Top()
+int64_t Heap::Get_Max()
 {
-	assert(size > 1);
-	return h[1];
+	assert(h.size() > 0);
+	return h[0];
 }
 
-
-int64_t Heap::Size()
-{
-	return size;
-}
 
 
 int main()
@@ -116,14 +118,16 @@ int main()
 	cin.tie(nullptr);
 	int64_t n, k;
 	cin >> n >> k;
-	Heap heap;
-	for (int64_t i = 0; i < n; ++i) {
+	vector<int64_t> first_elem(k);
+	for (int64_t i = 0; i < k; ++i) {
+		cin >> first_elem[i];
+	}
+	Heap heap(first_elem);
+	for (int64_t i = k; i < n; ++i) {
 		int64_t x;
 		cin >> x;
 		heap.Push(x);
-		if (heap.Size() > k + 1) {
-			heap.Pop();
-		}
+		heap.Pop();
 	}
 	vector<int> ans(k);
 	for (int64_t i = 0; i < k; ++i) {
