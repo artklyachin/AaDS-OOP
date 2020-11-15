@@ -45,11 +45,7 @@ private:
 };
 
 Heap::Heap()
-{
-	h = vector<int64_t>(1);
-	i_h = vector<int64_t>(1);
-	h_i = vector<int64_t>(1);
-}
+{ }
 
 
 Heap::~Heap()
@@ -79,11 +75,11 @@ void Heap::Add_Elem(int64_t el, int64_t move)
 
 void Heap::Lift_Up(int64_t index)
 {
-	int64_t p = index / 2;
-	while (p > 0 && h[index] < h[p]) {
+	int64_t p = (index - 1) / 2;
+	while (p >= 0 && h[index] < h[p]) {
 		Swap_Elem(index, p);
 		index = p;
-		p = index / 2;
+		p = (index - 1) / 2;
 	}
 }
 
@@ -91,8 +87,8 @@ void Heap::Lift_Up(int64_t index)
 void Heap::Pull_Down(int64_t index)
 {
 	int64_t size = h.size();
-	while (2 * index < size) {
-		int64_t left = 2 * index, right = 2 * index + 1;
+	while (2 * index + 1 < size) {
+		int64_t left = 2 * index + 1, right = 2 * index + 2;
 		int64_t j = left;
 		if (right < size && h[left] > h[right]) {
 			j = right;
@@ -115,23 +111,23 @@ void Heap::Push(int64_t el, int64_t move)
 
 int64_t Heap::Pop()
 {
-	assert(int64_t(h.size()) > 1LL);
+	assert(int64_t(h.size()) > 0LL);
 	h_i.push_back(-1);
-	int64_t returnValue = h[1];
-	Swap_Elem(1, int64_t(h.size()) - 1);
+	int64_t returnValue = h[0];
+	Swap_Elem(0, int64_t(h.size()) - 1);
 	h_i[i_h.back()] = -1;
 	h.pop_back();
 	i_h.pop_back();
-	Pull_Down(1);
+	Pull_Down(0);
 	return returnValue;
 }
 
 
 int64_t Heap::Get_Min()
 {
-	assert(int64_t(h.size()) > 1LL);
+	assert(int64_t(h.size()) > 0LL);
 	h_i.push_back(-1);
-	return h[1];
+	return h[0];
 }
 
 
@@ -151,7 +147,7 @@ int main()
 	int64_t q;
 	cin >> q;
 	Heap heap;
-	for (int64_t move = 1; move <= q; ++move) {
+	for (int64_t move = 0; move < q; ++move) {
 		string s;
 		cin >> s;
 		if (s == "insert") {
@@ -161,7 +157,7 @@ int main()
 		} else if (s == "decreaseKey") {
 			int64_t move, diff;
 			cin >> move >> diff;
-			heap.Change_Elem(move, diff);
+			heap.Change_Elem(move - 1, diff);
 		} else if (s == "getMin") {
 			cout << heap.Get_Min() << "\n";
 		} else if (s == "extractMin") {
