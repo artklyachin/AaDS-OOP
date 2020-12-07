@@ -45,8 +45,7 @@ private:
     void deleteTree(Node* tree);
     Node* addToTree(int x, Node* node);
     Node* deleteElem(Node* node, int x);
-    int FindMinInTree(Node* node);
-    Node* DeleteMinInTree(Node* node);
+    pair<Node*, int> FindAndRemoveMinInTree(Node* node);
     Node* Rotate(Node* node);
     Node* rotateLeft(Node* node);
     Node* rotateRight(Node* node);
@@ -165,24 +164,17 @@ void BinTree::Delete(int x)
 }
 
 
-int BinTree::FindMinInTree(Node* node)
-{
-    if (node->Left == nullptr) {
-        return node->key;
-    }
-    FindMinInTree(node->Left);
-}
-
-
-Node* BinTree::DeleteMinInTree(Node* node)
+pair<Node*, int> BinTree::FindAndRemoveMinInTree(Node* node)
 {
     if (node->Left == nullptr) {
         Node* part = node->Right;
+        int min = node->key;
         delete node;
-        return part;
+        return { part, min };
     }
-    node->Left = DeleteMinInTree(node->Left);
-    return Rotate(node);
+    auto result = FindAndRemoveMinInTree(node->Left);
+    node->Left = result.first;
+    return { Rotate(node), result.second };
 }
 
 
@@ -202,9 +194,9 @@ Node* BinTree::deleteElem(Node* root, int x)
         if (right == nullptr) {
             return left;
         }
-        int min = FindMinInTree(right);
-        Node* mewroot = new Node(min);
-        mewroot->Right = DeleteMinInTree(right);
+        auto result = FindAndRemoveMinInTree(right);
+        Node* mewroot = new Node(result.second);
+        mewroot->Right = result.first;
         mewroot->Left = left;
         return Rotate(mewroot);
     }
