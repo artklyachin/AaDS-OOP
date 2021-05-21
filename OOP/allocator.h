@@ -1,19 +1,15 @@
-#include <iostream>
 #include <vector>
 #include <algorithm>
-#include <list>
 #include <memory>
 #include <iterator>
-#include <cassert>
-#include <string>
+#include <limits>
 
-template <size_t chunkSize>
+template <size_t ChunkSize, typename = std::enable_if_t<ChunkSize >= sizeof(uint8_t*)>>
 class FixedAllocator
 {
 public:
     FixedAllocator()
-    {
-    }
+    { }
 
     ~FixedAllocator()
     {
@@ -24,21 +20,35 @@ public:
 
     void* allocate()
     {
-        if (blocks.empty() || index == chunkCount) {
-            blocks.push_back(static_cast<uint8_t*>(::operator new(chunkCount * chunkSize)));
-            index = 0;
+        if (next_free == nullptr) {
+            uint8_t* p = static_cast<uint8_t*>(::operator new(ChunkCount * ChunkSize));
+            blocks.push_back(p);
+            for (int i = ChunkCount - 1; i >= 0; --i) {
+                add_free_chunk(p + i * ChunkSize);
+            }
         }
-        return blocks.back() + chunkSize * index++;
+        void* chunk = reinterpret_cast<void*>(next_free);
+        next_free = *reinterpret_cast<uint8_t**>(next_free);
+        return chunk;
     }
 
     void deallocate(void* p)
     {
+        if (p != nullptr) {
+            add_free_chunk(reinterpret_cast<uint8_t*>(p));
+        }
     }
 
 private:
-    const size_t chunkCount = 65536;
+    void add_free_chunk(uint8_t* p)
+    {
+        *reinterpret_cast<uint8_t**>(p) = next_free;
+        next_free = p;
+    }
+
+    constexpr static size_t ChunkCount = 65536;
     std::vector<uint8_t*> blocks;
-    size_t index = 0;
+    uint8_t* next_free = nullptr;
 };
 
 template<typename T>
@@ -46,21 +56,18 @@ class FastAllocator
 {
 public:
     FastAllocator()
-        : allocator(new FixedAllocator<24>)
-    {
-    }
+        : allocator(new FixedAllocator<AllocSize>)
+    { }
 
     template <class U> friend class FastAllocator;
 
     template <class U>
     FastAllocator(const FastAllocator<U>& other)
         : allocator(other.allocator)
-    {
-    }
+    { }
 
     ~FastAllocator()
-    {
-    }
+    { }
 
     template <class U>
     FastAllocator& operator=(const FastAllocator<U>& other)
@@ -72,7 +79,7 @@ public:
     T* allocate(size_t n, const void* = nullptr)
     {
         size_t sz = n * sizeof(T);
-        if (sz <= 24) {
+        if (sz <= AllocSize) {
             return reinterpret_cast<T*>(allocator->allocate());
         } else {
             return reinterpret_cast<T*>(::operator new(sz));
@@ -82,7 +89,9 @@ public:
     void deallocate(T* p, size_t n)
     {
         size_t sz = n * sizeof(T);
-        if (sz > 24) {
+        if (sz <= AllocSize) {
+            allocator->deallocate(p);
+        } else {
             ::operator delete(p);
         }
     }
@@ -112,33 +121,37 @@ public:
     }
 
 private:
-    std::shared_ptr<FixedAllocator<24>> allocator;
+    constexpr static int AllocSize = 24;
+    std::shared_ptr<FixedAllocator<AllocSize>> allocator;
 };
 
-template<typename T, typename Allocator = std::allocator<T>>
+template<
+    typename T,
+    typename Allocator = std::allocator<T>
+>
 class List
 {
+private:
     struct Node
     {
+        friend class List;
         Node* _prev;
         Node* _next;
-        T _value; 
+        T _value; // unused for head node
 
         Node(Node* prev, Node* next, const T& value)
             : _prev(prev), _next(next), _value(value)
-        {
-        }
+        { }
 
         Node(Node* prev, Node* next)
             : _prev(prev), _next(next)
-        {
-        }
+        { }
     };
 
 public:
-    using RebindAlloc = typename std::allocator_traits<Allocator>::template rebind_alloc<Node>;
-    using AllocTraits = std::allocator_traits<RebindAlloc>;
-    using allocator_type = Allocator;
+    using NodeAlloc = typename std::allocator_traits<Allocator>::template rebind_alloc<Node>;
+    using NodeAllocTraits = std::allocator_traits<NodeAlloc>;
+    using NodePtr = Node*;
     using value_type = T;
     using pointer = T*;
     using const_pointer = const T*;
@@ -147,27 +160,25 @@ public:
 
     Node* _head = nullptr;
     size_t _size = 0;
-    RebindAlloc _alloc;
+    NodeAlloc _alloc;
 
-    explicit List(const Allocator& _alloc = Allocator())
-        : _head(nullptr), _size(0), _alloc(_alloc)
+    List(const Allocator& alloc = Allocator())
+        : _head(nullptr), _size(0), _alloc(alloc)
     {
         allocate_head();
     }
 
-    explicit List(size_t count, const T& value, const Allocator& _alloc = Allocator())
-        : _head(nullptr), _size(0), _alloc(_alloc)
+    List(size_t count, const T& value, const Allocator& alloc = Allocator())
+        : List(alloc)
     {
-        allocate_head();
         for (int i = 0; i < int(count); ++i) {
             push_back(value);
         }
     }
 
-    explicit List(size_t count, const Allocator& _alloc = Allocator())
-        : _head(nullptr), _size(0), _alloc(_alloc)
+    List(size_t count, const Allocator& alloc = Allocator())
+        : List(alloc)
     {
-        allocate_head();
         for (int i = 0; i < int(count); ++i) {
             emplace(cend());
         }
@@ -180,6 +191,13 @@ public:
         append(other);
     }
 
+    List(List&& other) noexcept
+        : List(other._alloc)
+    {
+        std::swap(_head, other._head);
+        std::swap(_size, other._size);
+    }
+
     ~List()
     {
         dispose();
@@ -188,7 +206,7 @@ public:
 private:
     void allocate_head()
     {
-        _head = AllocTraits::allocate(_alloc, 1);
+        _head = allocate_free_node();
         _head->_prev = _head;
         _head->_next = _head;
     }
@@ -198,13 +216,13 @@ private:
         Node* p = _head->_next;
         while (p != _head) {
             Node* next = p->_next;
-            AllocTraits::destroy(_alloc, p);
-            AllocTraits::deallocate(_alloc, p, 1);
+            NodeAllocTraits::destroy(_alloc, p);
+            NodeAllocTraits::deallocate(_alloc, p, 1);
             p = next;
         }
-        AllocTraits::deallocate(_alloc, _head, 1);
-        _head = nullptr;
+        deallocate_free_node(_head);
         _size = 0;
+        _head = nullptr;
     }
 
     void append(const List& other)
@@ -217,20 +235,41 @@ private:
 public:
     Allocator get_allocator() const noexcept
     {
-        return Allocator(_alloc);
+        return static_cast<Allocator>(_alloc);
     }
 
     List& operator=(const List& other)
     {
         if (this != &other) {
             dispose();
-            if (AllocTraits::propagate_on_container_copy_assignment::value) {
+            if (NodeAllocTraits::propagate_on_container_copy_assignment::value) {
                 _alloc = other._alloc;
             }
             allocate_head();
             append(other);
         }
         return *this;
+    }
+
+    List& operator=(List&& other) noexcept
+    {
+        if (this != &other) {
+            std::swap(_head, other._head);
+            std::swap(_size, other._size);
+            if (NodeAllocTraits::propagate_on_container_move_assignment::value) {
+                _alloc = std::move(other._alloc);
+            }
+        }
+        return *this;
+    }
+
+    void swap(List& other)
+    {
+        std::swap(_head, other._head);
+        std::swap(_size, other._size);
+        if (NodeAllocTraits::propagate_on_container_swap::value) {
+            std::swap(_alloc, other._alloc);
+        }
     }
 
     size_t size() const
@@ -269,13 +308,7 @@ public:
 
         const_iterator()
             : _node(nullptr)
-        {
-        }
-
-        const_iterator(List::Node* node)
-            : _node(node)
-        {
-        }
+        { }
 
         reference operator*() const
         {
@@ -323,7 +356,13 @@ public:
             return !(*this == rhs);
         }
 
-        Node* _node; 
+    private:
+        friend class List;
+        Node* _node; // pointer to node
+
+        const_iterator(List::Node* node)
+            : _node(node)
+        { }
     };
 
     class iterator : public const_iterator
@@ -345,7 +384,7 @@ public:
 
         pointer operator->() const
         {
-            return const_cast<pointer>(&Base::_node->_value);
+            return const_cast<pointer>(Base::operator->());
         }
 
         iterator& operator++()
@@ -373,6 +412,13 @@ public:
             Base::operator--();
             return temp;
         }
+
+    private:
+        friend class List;
+
+        iterator(List::Node* node)
+            : const_iterator(node)
+        {}
     };
 
     using reverse_iterator = std::reverse_iterator<iterator>;
@@ -438,26 +484,26 @@ public:
         return const_reverse_iterator(begin());
     }
 
-    iterator insert(const_iterator next, const T& value)
+    template<typename... Args>
+    iterator emplace(const_iterator next, Args&& ...args)
     {
         const_iterator prev = std::prev(next);
-        Node* p = AllocTraits::allocate(_alloc, 1);
-        AllocTraits::construct(_alloc, p, prev._node, next._node, value);
+        Node* p = NodeAllocTraits::allocate(_alloc, 1);
+        NodeAllocTraits::construct(_alloc, p, prev._node, next._node, std::forward<Args>(args)...);
         prev._node->_next = p;
         next._node->_prev = p;
         ++_size;
         return iterator(p);
     }
 
-    iterator emplace(const_iterator next)
+    iterator insert(const_iterator next, const T& value)
     {
-        const_iterator prev = std::prev(next);
-        Node* p = AllocTraits::allocate(_alloc, 1);
-        AllocTraits::construct(_alloc, p, prev._node, next._node);
-        prev._node->_next = p;
-        next._node->_prev = p;
-        ++_size;
-        return iterator(p);
+        return emplace(next, value);
+    }
+
+    iterator insert(const_iterator next, T&& value)
+    {
+        return emplace(next, std::move(value));
     }
 
     iterator erase(const_iterator pos)
@@ -466,29 +512,54 @@ public:
         auto next = std::next(pos);
         prev._node->_next = next._node;
         next._node->_prev = prev._node;
-        AllocTraits::destroy(_alloc, pos._node);
-        AllocTraits::deallocate(_alloc, pos._node, 1);
+        NodeAllocTraits::destroy(_alloc, pos._node);
+        NodeAllocTraits::deallocate(_alloc, pos._node, 1);
         --_size;
         return iterator(next._node);
     }
+
+
+    Node* allocate_free_node()
+    {
+        return NodeAllocTraits::allocate(_alloc, 1);
+    }
+
+    void deallocate_free_node(Node* p)
+    {
+        NodeAllocTraits::deallocate(_alloc, p, 1);
+    }
+
+    static T& nodeValue(Node* p)
+    {
+        return p->_value;
+    }
+
+    static iterator remove_constness(const_iterator it)
+    {
+        return iterator(it._node);
+    }
+
+    iterator insert_node(const_iterator next, Node* p)
+    {
+        const_iterator prev = std::prev(next);
+        p->_prev = prev._node;
+        p->_next = next._node;
+        prev._node->_next = p;
+        next._node->_prev = p;
+        ++_size;
+        return iterator(p);
+    }
+
+    Node* detach_front()
+    {
+        if (size() == 0) {
+            return nullptr;
+        }
+        Node* p = _head->_next;
+        _head->_next = p->_next;
+        _head->_next->_prev = _head;
+        --_size;
+        return p;
+    }
+
 };
-
-using namespace std;
-
-template<typename T>
-void print_list(T& container)
-{
-    for (auto& v : container) {
-        cout << v << " ";
-    }
-    cout << endl;
-}
-
-template<typename T>
-void print_reversed_list(T& container)
-{
-    for (auto it = container.rbegin(); it != container.rend(); ++it) {
-        cout << *it << " ";
-    }
-    cout << endl;
-}
