@@ -17,25 +17,6 @@
 using namespace std;
 
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <stack>
-#include <queue>
-#include <deque>
-#include <map>
-#include <unordered_map>
-#include <set>
-#include <unordered_set>
-#include <random>
-#include <assert.h>
-#include <algorithm>
-
-
-using namespace std;
-
-
 class Zfunc {
 private:
     vector<int> s;
