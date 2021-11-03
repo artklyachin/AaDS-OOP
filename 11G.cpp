@@ -55,7 +55,7 @@ struct Solution
     {
         if (nodes[p].suffixLink != -1) {
             return nodes[p].suffixLink;
-        } else if (nodes[p].parent <= 0) { // not assigned or root
+        } else if (nodes[p].parent <= 0) { 
             return nodes[p].suffixLink = 0;
         } else {
             return nodes[p].suffixLink = getSuffixNext(getSuffixLink(nodes[p].parent), nodes[p].parentChar);
@@ -120,7 +120,6 @@ public:
         for (auto& s : dict) {
             add(s);
         }
-        // нам нужно найти цикл в ориентированном графе (построенном боре по ссылкам из suffixNext), не проходящий через листы
         visited.assign(nodeCount, 0);
         return dfs(0);
     }
