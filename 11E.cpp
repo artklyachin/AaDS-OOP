@@ -5,24 +5,27 @@
 
 using namespace std;
 
-struct Solution
+class Bor
 {
-    static constexpr int K = 'z' - 'a' + 1;
+    static constexpr char FIRST_CHAR = 'a';
+    static constexpr char LAST_CHAR = 'z';
+    static constexpr int ALPHABET_LEN = LAST_CHAR - FIRST_CHAR + 1;
+    static constexpr int INIT_VALUE = -1;
 
     struct Node
     {
-        int next[K] = {};
-        int targetId = -1;
-        int parent = -1;
-        char parentChar = 'a';
-        int suffixLink = -1;
-        int suffixNext[K] = {};
-        int suffixLeaf = -1;
+        int next[ALPHABET_LEN] = {};
+        int targetId = INIT_VALUE;
+        int parent = INIT_VALUE;
+        char parentChar = FIRST_CHAR;
+        int suffixLink = INIT_VALUE;
+        int suffixNext[ALPHABET_LEN] = {};
+        int suffixLeaf = INIT_VALUE;
 
         Node()
         {
-            fill(begin(next), end(next), -1);
-            fill(begin(suffixNext), end(suffixNext), -1);
+            fill(begin(next), end(next), INIT_VALUE);
+            fill(begin(suffixNext), end(suffixNext), INIT_VALUE);
         }
 
         void setParent(int parent_, char parentChar_)
@@ -35,88 +38,100 @@ struct Solution
     vector<Node> nodes;
     int nodeCount = 0;
     vector<int> copyOf;
+    const int ROOT = 0;
 
-    void add(const string& s, int id)
+
+public:
+
+    Bor(const vector<string>& targets)
     {
-        int p = 0;
-        for (int i = 0; i < int(s.size()); ++i) {
-            char q = s[i] - 'a';
-            if (nodes[p].next[q] == -1) {
-                nodes[p].next[q] = nodeCount;
-                nodes[nodeCount].setParent(p, s[i]);
+        int len = 0;
+        for (auto& str : targets) {
+            len += str.size();
+        }
+        nodes.resize(len + 1);
+        nodes[ROOT].setParent(ROOT, LAST_CHAR);
+        nodeCount = 1;
+
+        copyOf.assign(targets.size(), INIT_VALUE);
+        for (int id = 0; id < int(targets.size()); ++id) {
+            add(targets[id], id);
+        }
+    }
+
+    void add(const string& target, int id)
+    {
+        int node = ROOT;
+        for (int i = 0; i < int(target.size()); ++i) {
+            char edge_lable = target[i] - FIRST_CHAR;
+            if (nodes[node].next[edge_lable] == INIT_VALUE) {
+                nodes[node].next[edge_lable] = nodeCount;
+                nodes[nodeCount].setParent(node, target[i]);
                 ++nodeCount;
             }
-            p = nodes[p].next[q];
+            node = nodes[node].next[edge_lable];
         }
-        copyOf[id] = nodes[p].targetId;
-        nodes[p].targetId = id;
+        copyOf[id] = nodes[node].targetId;
+        nodes[node].targetId = id;
     }
 
-    int getSuffixLink(int p)
-    {
-        if (nodes[p].suffixLink != -1) {
-            return nodes[p].suffixLink;
-        } else if (nodes[p].parent <= 0) { // not assigned or root
-            return nodes[p].suffixLink = 0;
-        } else {
-            return nodes[p].suffixLink = getSuffixNext(getSuffixLink(nodes[p].parent), nodes[p].parentChar);
-        }
-    }
+private:
 
-    int getSuffixNext(int p, char c)
+    int getSuffixLink(int node)
     {
-        int q = c - 'a';
-        if (nodes[p].suffixNext[q] != -1) {
-            return nodes[p].suffixNext[q];
-        } else if (nodes[p].next[q] != -1) {
-            return nodes[p].suffixNext[q] = nodes[p].next[q];
-        } else if (p == 0) {
-            return nodes[p].suffixNext[q] = 0;
+        if (nodes[node].suffixLink != INIT_VALUE) {
+            return nodes[node].suffixLink;
+        } else if (nodes[node].parent == INIT_VALUE || nodes[node].parent == ROOT) { // not assigned or ROOT
+            return nodes[node].suffixLink = ROOT;
         } else {
-            return nodes[p].suffixNext[q] = getSuffixNext(getSuffixLink(p), c);
+            return nodes[node].suffixLink = getSuffixNext(getSuffixLink(nodes[node].parent), nodes[node].parentChar);
         }
     }
 
-    int getSuffixLeaf(int p)
+    int getSuffixNext(int node, char symbol)
     {
-        if (nodes[p].suffixLeaf != -1) {
-            return nodes[p].suffixLeaf;
-        } else if (getSuffixLink(p) == 0) {
-            return nodes[p].suffixLeaf = 0;
-        } else if (nodes[getSuffixLink(p)].targetId != -1) {
-            return nodes[p].suffixLeaf = getSuffixLink(p);
+        int edge_lable = symbol - FIRST_CHAR;
+        if (nodes[node].suffixNext[edge_lable] != INIT_VALUE) {
+            return nodes[node].suffixNext[edge_lable];
+        } else if (nodes[node].next[edge_lable] != INIT_VALUE) {
+            return nodes[node].suffixNext[edge_lable] = nodes[node].next[edge_lable];
+        } else if (node == ROOT) {
+            return nodes[node].suffixNext[edge_lable] = ROOT;
         } else {
-            return nodes[p].suffixLeaf = getSuffixLeaf(getSuffixLink(p));
+            return nodes[node].suffixNext[edge_lable] = getSuffixNext(getSuffixLink(node), symbol);
+        }
+    }
+
+    int getSuffixLeaf(int node)
+    {
+        if (nodes[node].suffixLeaf != INIT_VALUE) {
+            return nodes[node].suffixLeaf;
+        } else if (getSuffixLink(node) == ROOT) {
+            return nodes[node].suffixLeaf = ROOT;
+        } else if (nodes[getSuffixLink(node)].targetId != INIT_VALUE) {
+            return nodes[node].suffixLeaf = getSuffixLink(node);
+        } else {
+            return nodes[node].suffixLeaf = getSuffixLeaf(getSuffixLink(node));
         }
     }
 
 public:
-    vector<vector<int>> solve(const string& source, const vector<string> targets)
-    {
-        int len = 0;
-        for (auto& s : targets) {
-            len += s.size();
-        }
-        nodes.resize(len + 1);
-        nodes[0].setParent(0, 'z');
-        nodeCount = 1;
 
-        copyOf.assign(targets.size(), -1);
-        for (int id = 0; id < int(targets.size()); ++id) {
-            add(targets[id], id);
-        }
+    vector<vector<int>> solve(const string& source, const vector<string>& targets)
+    {
         vector<vector<int>> results(targets.size());
-        int p = 0;
+        int node = ROOT;
         for (int i = 0; i < int(source.size()); ++i) {
-            p = getSuffixNext(p, source[i]);
-            for (int p2 = p; p2 != 0; p2 = getSuffixLeaf(p2)) {
-                if (nodes[p2].targetId != -1) {
-                    results[nodes[p2].targetId].push_back(i + 1 - int(targets[nodes[p2].targetId].size()));
+            node = getSuffixNext(node, source[i]);
+            for (int node2 = node; node2 != ROOT; node2 = getSuffixLeaf(node2)) {
+                if (nodes[node2].targetId != INIT_VALUE) {
+                    results[nodes[node2].targetId].push_back(i + 1 - int(targets[nodes[node2].targetId].size()));
                 }
             }
         }
+
         for (int id = int(targets.size()) - 1; id >= 0; --id) {
-            if (copyOf[id] != -1) {
+            if (copyOf[id] != INIT_VALUE) {
                 results[copyOf[id]] = results[id];
             }
         }
@@ -133,10 +148,10 @@ int main()
     int N;
     cin >> source >> N;
     vector<string> targets(N);
-    for (auto& s : targets) {
-        cin >> s;
+    for (auto& str : targets) {
+        cin >> str;
     }
-    auto result = Solution().solve(source, targets);
+    auto result = Bor(targets).solve(source, targets);
     for (int id = 0; id < int(targets.size()); ++id) {
         cout << result[id].size();
         for (int i : result[id]) {
