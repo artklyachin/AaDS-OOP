@@ -1,103 +1,101 @@
 ﻿#include <iostream>
-#include <fstream>
 #include <string>
 #include <vector>
-#include <unordered_map> 
-#include <cmath>         
+#include <cmath>
 #include <algorithm>
 
-using namespace std;
 
-struct SuffArray {
+class SuffArray {
+    std::vector<int> suff_array;
 
-    SuffArray(string s)
+public:
+
+    SuffArray(std::string s)
     {
-        int n = s.size();
+        int old_N = int(s.size());
         s.push_back('$');
-        int logorithm = int(ceil(log2(n + 1)));
-        int h = 1 << logorithm;
-        s.resize(h, '$');
-        vector<int> p = get_primary_p(s), color(h);
-        for (int i = 1; i < h; ++i) {
-            color[i] = color[i - 1];
-            if (s[p[i - 1]] != s[p[i]]) {
-                ++color[i];
+        int logarithm = int(ceil(log2(old_N + 1)));
+        int N = 1 << logarithm;
+        s.resize(N, '$');
+        std::vector<int> phase = get_primary_phase(s), phase_color(N);
+        for (int i = 1; i < N; ++i) {
+            phase_color[i] = phase_color[i - 1];
+            if (s[phase[i - 1]] != s[phase[i]]) {
+                ++phase_color[i];
             }
         }
 
-        for (int pow = 1; pow < h; pow *= 2) {
-            vector<int> p2(h), pnext(h);
-            for (int j = 0; j < h; ++j) {
-                p2[j] = p[j] - pow;
-                if (p2[j] < 0) {
-                    p2[j] += h;
+        for (int pow = 1; pow < N; pow *= 2) {
+            std::vector<int> shifted_phase(N), next_phase(N);
+            for (int j = 0; j < N; ++j) {
+                shifted_phase[j] = phase[j] - pow;
+                if (shifted_phase[j] < 0) {
+                    shifted_phase[j] += N;
                 }
             }
-            vector<int> count(color.size());
-            for (int j = 0; j < h; ++j) {
-                ++count[color[j]];
+            std::vector<int> count(phase_color.size());
+            for (int j = 0; j < N; ++j) {
+                ++count[phase_color[j]];
             }
-            for (int j = 1; j < color.size(); ++j) {
+            for (int j = 1; j < phase_color.size(); ++j) {
                 count[j] += count[j - 1];
             }
-            vector<int> color_p(h);
-            for (int j = 0; j < h; ++j) {
-                color_p[p[j]] = color[j];
+            std::vector<int> position_color(N);
+            for (int j = 0; j < N; ++j) {
+                position_color[phase[j]] = phase_color[j];
             }
-            vector<pair<int, int>> color2(h);
-            for (int j = h - 1; j >= 0; --j) {
-                int new_index = --count[color_p[p2[j]]];
-                pnext[new_index] = p2[j];
-                color2[new_index] = { color_p[p2[j]] , color[j] };
+            std::vector<std::pair<int, int>> next_phase_color(N);
+            for (int j = N - 1; j >= 0; --j) {
+                int new_index = --count[position_color[shifted_phase[j]]];
+                next_phase[new_index] = shifted_phase[j];
+                next_phase_color[new_index] = { position_color[shifted_phase[j]] , phase_color[j] };
             }
-            for (int j = 1; j < h; ++j) {
-                if (color2[j - 1] != color2[j]) {
-                    color[j] = color[j - 1] + 1;
+            for (int j = 1; j < N; ++j) {
+                if (next_phase_color[j - 1] != next_phase_color[j]) {
+                    phase_color[j] = phase_color[j - 1] + 1;
                 } else {
-                    color[j] = color[j - 1];
+                    phase_color[j] = phase_color[j - 1];
                 }
             }
-            p = pnext;
+            phase = next_phase;
         }
-        suff_array.resize(n);
-        copy(p.begin() + h - n, p.end(), suff_array.begin());
+        suff_array.resize(old_N);
+        copy(phase.begin() + N - old_N, phase.end(), suff_array.begin());
     }
 
-    vector<int> getArray()
+    const std::vector<int>& getArray()
     {
         return suff_array;
     }
 
 private:
-    vector<int> suff_array;
-
-    vector<int> get_primary_p(string s)
+    std::vector<int> get_primary_phase(const std::string& s)
     {
-        int n = s.size();
-        vector<pair<char, int>> v(n);
-        for (int i = 0; i < n; ++i) {
-            v[i] = { s[i], i };
+        int N = s.size();
+        std::vector<std::pair<char, int>> sorted_pos(N);
+        for (int i = 0; i < N; ++i) {
+            sorted_pos[i] = { s[i], i };
         }
-        sort(v.begin(), v.end());
-        vector<int> p(n);
-        for (int i = 0; i < n; ++i) {
-            p[i] = v[i].second;
+        sort(sorted_pos.begin(), sorted_pos.end());
+        std::vector<int> phase(N);
+        for (int i = 0; i < N; ++i) {
+            phase[i] = sorted_pos[i].second;
         }
-        return p;
+        return phase;
     }
 };
 
 int main()
 {
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-    string s;
-    cin >> s;
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+    std::string s;
+    std::cin >> s;
     SuffArray suff_array(s);
-    vector<int> ans = suff_array.getArray();
+    std::vector<int> ans = suff_array.getArray();
     for (auto it = ans.begin(); it < ans.end(); ++it) {
-        cout << *it + 1 << " ";
+        std::cout << *it + 1 << " ";
     }
-    cout << endl;
+    std::cout << std::endl;
     return 0;
 }
