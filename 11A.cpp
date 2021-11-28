@@ -1,59 +1,44 @@
 ﻿#include <iostream>
-#include <fstream>
 #include <string>
 #include <vector>
-#include <stack>
-#include <queue>
-#include <deque>
-#include <map>
-#include <unordered_map>
-#include <set>
-#include <unordered_set>
-#include <random>
-#include <assert.h>
-#include <algorithm>
-
-
-using namespace std;
 
 
 class Find_Equels
 {
 private:
-    vector<int> ans;
+    std::vector<int> ans;
     int64_t MOD = 1e9 + 7;
 
 public:
 
-
-    Find_Equels(string s, string t)
+    Find_Equels(std::string text, std::string pattern)
     {
         int64_t hash_s = 0, hash_t = 0, r = 5, power_r = 1;
-        for (int i = 0; i < t.size(); ++i) {
-            hash_t += power_r * (t[i] - 'a');
-            hash_s += power_r * (s[i] - 'a');
+        for (int i = 0; i < pattern.size(); ++i) {
+            hash_t += power_r * (pattern[i] - 'a');
+            hash_s += power_r * (text[i] - 'a');
             power_r *= r;
             hash_t %= MOD;
             hash_s %= MOD;
             power_r %= MOD;
         }
 
-        vector<int64_t> h(s.size());
+        std::vector<int64_t> h(text.size());
         int64_t st_r = 1;
-        for (int i = 0; i < s.size(); ++i) {
-            h[i] = (s[i] - 'a') * st_r % MOD;
+        for (int i = 0; i < text.size(); ++i) {
+            h[i] = (text[i] - 'a') * st_r % MOD;
             st_r *= r;
             st_r %= MOD;
         }
 
-        for (int j = t.size() - 1; j < s.size(); ++j) {
+        for (int j = pattern.size() - 1; j < text.size(); ++j) {
             if (hash_s == hash_t) {
-                ans.push_back(j - t.size() + 1);
+                ans.push_back(j - pattern.size() + 1);
             }
-            if (j == s.size() - 1) {
+            if (j == text.size() - 1) {
                 break;
             }
-            hash_s += MOD - h[j - t.size() + 1];
+            hash_s += MOD - h[j - pattern.size() + 1];
             hash_s %= MOD;
             hash_s += h[j + 1];
             hash_s %= MOD;
@@ -64,22 +49,21 @@ public:
 
     void Print_equels()
     {
-        for (int i : ans) {
-            cout << i << " ";
+        for (auto& elem : ans) {
+            std::cout << elem << " ";
         }
-        cout << endl;
+        std::cout << std::endl;
     }
 
 };
 
-
 int main()
 {
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-    string s, t;
-    cin >> s >> t;
-    Find_Equels elem(s, t);
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+    std::string text, pattern;
+    std::cin >> text >> pattern;
+    Find_Equels elem(text, pattern);
     elem.Print_equels();
     return 0;
 }
