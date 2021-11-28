@@ -1,36 +1,22 @@
 ﻿#include <iostream>
-#include <fstream>
 #include <string>
 #include <vector>
-#include <stack>
-#include <queue>
-#include <deque>
-#include <map>
-#include <unordered_map>
-#include <set>
-#include <unordered_set>
-#include <random>
-#include <assert.h>
-#include <algorithm>
-
-
-using namespace std;
 
 
 class Zfunc {
 private:
-    vector<int> s;
-    vector<int> res;
+    std::vector<int> substr;
+    std::vector<int> res;
 
     void z_function()
     {
         int r = 0, l = 0;
-        res.resize(s.size());
-        for (int i = 1; i < s.size(); ++i) {
+        res.resize(substr.size());
+        for (int i = 1; i < substr.size(); ++i) {
             if (r >= i) {
-                res[i] = min(r + 1 - i, res[i - l]);
+                res[i] = std::min(r + 1 - i, res[i - l]);
             }
-            while (res[i] + i < s.size() && s[res[i]] == s[res[i] + i]) {
+            while (res[i] + i < substr.size() && substr[res[i]] == substr[res[i] + i]) {
                 res[i] += 1;
             }
             if (i - 1 + res[i] > r) {
@@ -41,16 +27,16 @@ private:
     }
 
 public:
-    Zfunc(vector<int>& old_s)
+    Zfunc(std::vector<int>& initial_substring)
     {
-        s.resize(old_s.size());
-        copy(old_s.begin(), old_s.end(), s.begin());
+        substr.resize(initial_substring.size());
+        copy(initial_substring.begin(), initial_substring.end(), substr.begin());
         z_function();
     }
 
     int get(int index)
     {
-        if (index < 0 || index >= s.size()) {
+        if (index < 0 || index >= substr.size()) {
             return 0;
         }
         return res[index];
@@ -62,9 +48,9 @@ private:
 
 public:
 
-    void print_points(vector<int>& boxs)
+    void print_points(std::vector<int>& boxs)
     {
-        vector<int> palindrom(2 * boxs.size()), ans;
+        std::vector<int> palindrom(2 * boxs.size()), ans;
         copy(boxs.begin(), boxs.end(), palindrom.begin());
         copy(boxs.rbegin(), boxs.rend(), palindrom.begin() + boxs.size());
         Zfunc elem(palindrom);
@@ -77,24 +63,24 @@ public:
         }
         ans.push_back(boxs.size());
         for (auto it = ans.begin(); it != ans.end(); ++it) {
-            cout << *it << " ";
+            std::cout << *it << " ";
         }
-        cout << endl;
+        std::cout << std::endl;
     }
 };
 
 
 int main()
 {
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-    int n, m;
-    cin >> n >> m;
-    vector<int> s(n);
-    for (auto it = s.begin(); it < s.end(); ++it) {
-        cin >> *it;
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+    int num_of_cubs, num_of_colors;
+    std::cin >> num_of_cubs >> num_of_colors;
+    std::vector<int> substr(num_of_cubs);
+    for (auto it = substr.begin(); it < substr.end(); ++it) {
+        std::cin >> *it;
     }
     Boxs elem;
-    elem.print_points(s);
+    elem.print_points(substr);
     return 0;
 }
