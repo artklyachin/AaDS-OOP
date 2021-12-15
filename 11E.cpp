@@ -26,7 +26,7 @@ class AhoCorasick
 
 public:
     AhoCorasick();
-    AhoCorasick(std::string source, std::vector<std::string> targets);
+    AhoCorasick(const std::string& source, const std::vector<std::string>& targets);
     std::vector<int> getResult(int id) const;
     int numberOfTargets() const;
 
@@ -68,7 +68,7 @@ AhoCorasick::AhoCorasick()
 {
 }
 
-AhoCorasick::AhoCorasick(std::string source, std::vector<std::string> targets)
+AhoCorasick::AhoCorasick(const std::string& source, const std::vector<std::string>& targets)
     : source(source), targets(targets)
 {
     createTree();
