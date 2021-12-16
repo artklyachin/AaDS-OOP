@@ -2,11 +2,9 @@
 #include <vector>
 #include <algorithm>
 
-using namespace std;
 
-struct Solution
+class Solution
 {
-private:
     static constexpr int64_t MOD = 1e9 + 7;
 
     int64_t power(int64_t x, int64_t n)
@@ -47,11 +45,11 @@ public:
 
 int main()
 {
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
     int64_t a, b, c, d;
-    cin >> a >> b >> c >> d;
-    cout << Solution().solve(a, b, c, d) << endl;
+    std::cin >> a >> b >> c >> d;
+    std::cout << Solution().solve(a, b, c, d) << std::endl;
     return 0;
 }
 
